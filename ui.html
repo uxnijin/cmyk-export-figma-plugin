@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    :root {
+      /* Bind to Figma's official variables if available, with robust dark-mode fallbacks */
+      --bg-color: var(--figma-color-bg, #2c2c2c);
+      --text-main: var(--figma-color-text, #e6e6e6);
+      --text-muted: var(--figma-color-text-secondary, #b3b3b3);
+      --input-bg: var(--figma-color-bg-secondary, #1e1e1e);
+      --input-border: var(--figma-color-border, #3c3c3c);
+      --card-border: var(--figma-color-border, #3c3c3c);
+      --accent-color: var(--figma-color-bg-brand, #18a0fb); /* Figma Blue */
+      --accent-hover: var(--figma-color-bg-brand-hover, #047edf);
+      --accent-active: var(--figma-color-bg-brand-pressed, #0070c9);
+      
+      --success-text: #10b981;
+      --warning-text: #f59e0b;
+      --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: var(--font-stack);
+      margin: 0;
+      padding: 16px;
+      box-sizing: border-box;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Redesigned Selection Status Card */
+    .selection-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background-color: var(--input-bg);
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      border: 1px dashed var(--input-border);
+      min-height: 52px;
+      box-sizing: border-box;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .selection-card.selected {
+      border-style: solid;
+      border-color: rgba(16, 185, 129, 0.35);
+      background-color: rgba(16, 185, 129, 0.04);
+    }
+
+    .selection-card.warning {
+      border-color: rgba(245, 158, 11, 0.35);
+      background-color: rgba(245, 158, 11, 0.02);
+    }
+
+    .selection-card .status-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .selection-card.selected .status-indicator {
+      background-color: rgba(16, 185, 129, 0.15);
+    }
+
+    .selection-card.warning .status-indicator {
+      background-color: rgba(245, 158, 11, 0.15);
+    }
+
+    .selection-card .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .selection-card.selected .status-dot {
+      background-color: var(--success-text);
+      box-shadow: 0 0 6px var(--success-text);
+    }
+
+    .selection-card.warning .status-dot {
+      background-color: var(--warning-text);
+      box-shadow: 0 0 6px var(--warning-text);
+    }
+
+    .selection-card .selection-details {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .selection-card .selection-label {
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+
+    .selection-card .selection-value {
+      font-size: 12px;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-main);
+    }
+
+    .selection-card.selected .selection-value {
+      font-weight: 600;
+    }
+
+    /* Form Fields */
+    .form-group {
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .select-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    select {
+      width: 100%;
+      background-color: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 4px;
+      color: var(--text-main);
+      padding: 6px 28px 6px 10px;
+      font-size: 12px;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      height: 32px;
+      box-sizing: border-box;
+      transition: border-color 0.15s ease;
+    }
+
+    select:hover {
+      border-color: #555;
+    }
+
+    select:focus {
+      border-color: var(--accent-color);
+    }
+
+    .select-wrapper::after {
+      content: "";
+      width: 5px;
+      height: 5px;
+      border-right: 1.5px solid var(--text-muted);
+      border-bottom: 1.5px solid var(--text-muted);
+      transform: rotate(45deg);
+      position: absolute;
+      right: 12px;
+      top: calc(50% - 4px);
+      pointer-events: none;
+    }
+
+    /* Buttons Row */
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: auto;
+    }
+
+    button {
+      font-family: var(--font-stack);
+      font-size: 12px;
+      font-weight: 500;
+      border: none;
+      border-radius: 5px;
+      height: 32px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-sizing: border-box;
+      transition: all 0.15s ease;
+    }
+
+    button#export-btn {
+      flex: 2;
+      background-color: var(--accent-color);
+      color: white;
+    }
+
+    button#export-btn:hover:not(:disabled) {
+      background-color: var(--accent-hover);
+    }
+
+    button#export-btn:active:not(:disabled) {
+      background-color: var(--accent-active);
+    }
+
+    button#export-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    button#cancel-btn {
+      flex: 1;
+      background-color: transparent;
+      color: var(--text-main);
+      border: 1px solid var(--input-border);
+    }
+
+    button#cancel-btn:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-color: #555;
+    }
+
+    /* Spinner Animation */
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.8s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      font-size: 10px;
+      color: var(--text-muted);
+      opacity: 0.75;
+      margin-top: 14px;
+      padding-top: 2px;
+    }
+
+    .footer a {
+      color: var(--accent-color);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <!-- Redesigned Selection Status Card -->
+  <div id="selection-row" class="selection-card warning">
+    <div class="status-indicator">
+      <div class="status-dot"></div>
+    </div>
+    <div class="selection-details">
+      <span class="selection-label">Target Selection</span>
+      <span id="layer-name" class="selection-value">Select a frame or group in Figma</span>
+    </div>
+  </div>
+
+  <!-- Exporter Form -->
+  <div class="form-group">
+    <label for="format-select">File Format</label>
+    <div class="select-wrapper">
+      <select id="format-select">
+        <option value="pdf">PDF (.pdf) - Preferred for Print</option>
+        <option value="jpeg">JPEG (.jpg)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="resolution-select">Resolution / Scale</label>
+    <div class="select-wrapper">
+      <select id="resolution-select">
+        <option value="4.1666667">300 DPI (High-Res Print - 4.17x)</option>
+        <option value="2.0833333">150 DPI (Mid-Res Print - 2.08x)</option>
+        <option value="1">72 DPI (Standard Screen - 1x)</option>
+        <option value="2">2x Scale</option>
+        <option value="3">3x Scale</option>
+        <option value="4">4x Scale</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="color-mode-select">Color Space Mode</label>
+    <div class="select-wrapper">
+      <select id="color-mode-select">
+        <option value="cmyk">CMYK (DeviceCMYK / Simulated)</option>
+        <option value="rgb">Standard RGB</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="actions">
+    <button id="cancel-btn">Cancel</button>
+    <button id="export-btn" disabled>
+      <div id="spinner" class="spinner"></div>
+      <span id="btn-text">Export Design</span>
+    </button>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    designed and developed by <a href="https://nijin.site" target="_blank">Nijin</a>
+  </div>
+
+  <script>
+    const selectionRow = document.getElementById('selection-row');
+    const layerNameSpan = document.getElementById('layer-name');
+    const formatSelect = document.getElementById('format-select');
+    const colorModeSelect = document.getElementById('color-mode-select');
+    const resolutionSelect = document.getElementById('resolution-select');
+    const exportBtn = document.getElementById('export-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const spinner = document.getElementById('spinner');
+    const btnText = document.getElementById('btn-text');
+
+    let isSelected = false;
+
+    // Listen for messages from code.ts
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+
+      if (msg.type === 'selection-change') {
+        isSelected = msg.selected;
+        if (isSelected) {
+          layerNameSpan.innerText = msg.name;
+          selectionRow.className = 'selection-card selected';
+          exportBtn.removeAttribute('disabled');
+        } else {
+          layerNameSpan.innerText = 'Select a frame or group in Figma';
+          selectionRow.className = 'selection-card warning';
+          exportBtn.setAttribute('disabled', 'true');
+        }
+      } else if (msg.type === 'export-result') {
+        processAndDownload(msg.bytes, msg.name);
+      } else if (msg.type === 'error') {
+        setLoading(false);
+        alert(msg.message);
+      }
+    };
+
+    // Cancel / Close
+    cancelBtn.onclick = () => {
+      parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*');
+    };
+
+    // Export Trigger
+    exportBtn.onclick = () => {
+      if (!isSelected) return;
+      setLoading(true);
+      
+      const scale = parseFloat(resolutionSelect.value);
+      parent.postMessage({
+        pluginMessage: {
+          type: 'export',
+          scale: scale
+        }
+      }, '*');
+    };
+
+    function setLoading(loading) {
+      if (loading) {
+        exportBtn.setAttribute('disabled', 'true');
+        spinner.style.display = 'block';
+        btnText.innerText = 'Converting...';
+      } else {
+        exportBtn.removeAttribute('disabled');
+        spinner.style.display = 'none';
+        btnText.innerText = 'Export Design';
+      }
+    }
+
+    // Process exported image pixels and construct binary outputs
+    function processAndDownload(pngBytes, name) {
+      const blob = new Blob([pngBytes], { type: 'image/png' });
+      const url = URL.createObjectURL(blob);
+
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+
+        const imgData = ctx.getImageData(0, 0, img.width, img.height);
+        const rgba = imgData.data;
+        const totalPixels = imgData.width * imgData.height;
+
+        const format = formatSelect.value;
+        const mode = colorModeSelect.value;
+        const sanitizedName = name.replace(/[^a-z0-9_-]/gi, '_');
+
+        try {
+          if (format === 'pdf') {
+            if (mode === 'cmyk') {
+              // Convert RGBA to CMYK raw pixel bytes
+              const cmykBytes = new Uint8Array(totalPixels * 4);
+              for (let i = 0; i < totalPixels; i++) {
+                const r = rgba[i * 4] / 255;
+                const g = rgba[i * 4 + 1] / 255;
+                const b = rgba[i * 4 + 2] / 255;
+
+                const k = 1 - Math.max(r, g, b);
+                const c = k === 1 ? 0 : (1 - r - k) / (1 - k);
+                const m = k === 1 ? 0 : (1 - g - k) / (1 - k);
+                const y = k === 1 ? 0 : (1 - b - k) / (1 - k);
+
+                cmykBytes[i * 4] = Math.round(c * 255);
+                cmykBytes[i * 4 + 1] = Math.round(m * 255);
+                cmykBytes[i * 4 + 2] = Math.round(y * 255);
+                cmykBytes[i * 4 + 3] = Math.round(k * 255);
+              }
+              const pdfBlob = createCmykPdf(img.width, img.height, cmykBytes);
+              downloadFile(pdfBlob, `${sanitizedName}-cmyk.pdf`);
+            } else {
+              // Export RGB PDF
+              const rgbBytes = new Uint8Array(totalPixels * 3);
+              for (let i = 0; i < totalPixels; i++) {
+                rgbBytes[i * 3] = rgba[i * 4];
+                rgbBytes[i * 3 + 1] = rgba[i * 4 + 1];
+                rgbBytes[i * 3 + 2] = rgba[i * 4 + 2];
+              }
+              const pdfBlob = createRgbPdf(img.width, img.height, rgbBytes);
+              downloadFile(pdfBlob, `${sanitizedName}-rgb.pdf`);
+            }
+          } else if (mode === 'cmyk' && format === 'jpeg') {
+            // Simulated CMYK Soft-Proofing in RGB JPEG Format
+            const simulatedRgba = new Uint8ClampedArray(rgba.length);
+            for (let i = 0; i < totalPixels; i++) {
+              const r = rgba[i * 4] / 255;
+              const g = rgba[i * 4 + 1] / 255;
+              const b = rgba[i * 4 + 2] / 255;
+
+              // RGB to CMYK
+              const k = 1 - Math.max(r, g, b);
+              const c = k === 1 ? 0 : (1 - r - k) / (1 - k);
+              const m = k === 1 ? 0 : (1 - g - k) / (1 - k);
+              const y = k === 1 ? 0 : (1 - b - k) / (1 - k);
+
+              // Convert back to RGB to simulate gamut restrictions
+              const rSim = (1 - c) * (1 - k);
+              const gSim = (1 - m) * (1 - k);
+              const bSim = (1 - y) * (1 - k);
+
+              simulatedRgba[i * 4] = Math.round(rSim * 255);
+              simulatedRgba[i * 4 + 1] = Math.round(gSim * 255);
+              simulatedRgba[i * 4 + 2] = Math.round(bSim * 255);
+              simulatedRgba[i * 4 + 3] = rgba[i * 4 + 3];
+            }
+
+            const simImgData = new ImageData(simulatedRgba, img.width, img.height);
+            ctx.putImageData(simImgData, 0, 0);
+
+            canvas.toBlob((blob) => {
+              downloadFile(blob, `${sanitizedName}-simulated-cmyk.jpg`);
+              setLoading(false);
+            }, 'image/jpeg', 0.95);
+            return;
+          } else {
+            // Standard RGB JPEG
+            canvas.toBlob((blob) => {
+              downloadFile(blob, `${sanitizedName}.jpg`);
+              setLoading(false);
+            }, 'image/jpeg', 0.95);
+            return;
+          }
+        } catch (err) {
+          alert('Error during conversion: ' + err.message);
+        }
+        setLoading(false);
+      };
+      
+      img.onerror = () => {
+        setLoading(false);
+        alert('Failed to load image for CMYK processing.');
+      };
+      
+      img.src = url;
+    }
+
+    // Binary PDF builders
+    function createCmykPdf(width, height, cmykBytes) {
+      const chunks = [];
+      let currentOffset = 0;
+      const offsets = [];
+
+      function write(str) {
+        const encoder = new TextEncoder();
+        const bytes = encoder.encode(str);
+        chunks.push(bytes);
+        currentOffset += bytes.length;
+      }
+
+      function writeBinary(bytes) {
+        chunks.push(bytes);
+        currentOffset += bytes.length;
+      }
+
+      function markObject(num) {
+        offsets[num] = currentOffset;
+        write(`${num} 0 obj\n`);
+      }
+
+      write("%PDF-1.4\n");
+      
+      // Catalog
+      markObject(1);
+      write("<<\n  /Type /Catalog\n  /Pages 2 0 R\n>>\nendobj\n");
+      
+      // Pages
+      markObject(2);
+      write("<<\n  /Type /Pages\n  /Kids [3 0 R]\n  /Count 1\n>>\nendobj\n");
+      
+      // Page
+      markObject(3);
+      write(`<<\n  /Type /Page\n  /Parent 2 0 R\n  /MediaBox [0 0 ${width} ${height}]\n  /Resources <<\n    /XObject <<\n      /Im1 4 0 R\n    >>\n  >>\n  /Contents 5 0 R\n>>\nendobj\n`);
+      
+      // Image XObject with CMYK colorspace
+      markObject(4);
+      write(`<<\n  /Type /XObject\n  /Subtype /Image\n  /Width ${width}\n  /Height ${height}\n  /ColorSpace /DeviceCMYK\n  /BitsPerComponent 8\n  /Length ${cmykBytes.length}\n>>\nstream\n`);
+      writeBinary(cmykBytes);
+      write("\nendstream\nendobj\n");
+      
+      // Contents
+      markObject(5);
+      const content = `q\n${width} 0 0 ${height} 0 0 cm\n/Im1 Do\nQ\n`;
+      write(`<<\n  /Length ${content.length}\n>>\nstream\n${content}endstream\nendobj\n`);
+      
+      // Compute cross-reference table (xref)
+      const xrefOffset = currentOffset;
+      write("xref\n");
+      write("0 6\n");
+      write("0000000000 65535 f \n");
+      for (let i = 1; i <= 5; i++) {
+        const offsetStr = String(offsets[i]).padStart(10, '0');
+        write(`${offsetStr} 00000 n \n`);
+      }
+      
+      write("trailer\n");
+      write(`<<\n  /Size 6\n  /Root 1 0 R\n>>\n`);
+      write("startxref\n");
+      write(`${xrefOffset}\n`);
+      write("%%EOF\n");
+
+      return new Blob(chunks, { type: 'application/pdf' });
+    }
+
+    function createRgbPdf(width, height, rgbBytes) {
+      const chunks = [];
+      let currentOffset = 0;
+      const offsets = [];
+
+      function write(str) {
+        const encoder = new TextEncoder();
+        const bytes = encoder.encode(str);
+        chunks.push(bytes);
+        currentOffset += bytes.length;
+      }
+
+      function writeBinary(bytes) {
+        chunks.push(bytes);
+        currentOffset += bytes.length;
+      }
+
+      function markObject(num) {
+        offsets[num] = currentOffset;
+        write(`${num} 0 obj\n`);
+      }
+
+      write("%PDF-1.4\n");
+      
+      // Catalog
+      markObject(1);
+      write("<<\n  /Type /Catalog\n  /Pages 2 0 R\n>>\nendobj\n");
+      
+      // Pages
+      markObject(2);
+      write("<<\n  /Type /Pages\n  /Kids [3 0 R]\n  /Count 1\n>>\nendobj\n");
+      
+      // Page
+      markObject(3);
+      write(`<<\n  /Type /Page\n  /Parent 2 0 R\n  /MediaBox [0 0 ${width} ${height}]\n  /Resources <<\n    /XObject <<\n      /Im1 4 0 R\n    >>\n  >>\n  /Contents 5 0 R\n>>\nendobj\n`);
+      
+      // Image XObject with RGB colorspace
+      markObject(4);
+      write(`<<\n  /Type /XObject\n  /Subtype /Image\n  /Width ${width}\n  /Height ${height}\n  /ColorSpace /DeviceRGB\n  /BitsPerComponent 8\n  /Length ${rgbBytes.length}\n>>\nstream\n`);
+      writeBinary(rgbBytes);
+      write("\nendstream\nendobj\n");
+      
+      // Contents
+      markObject(5);
+      const content = `q\n${width} 0 0 ${height} 0 0 cm\n/Im1 Do\nQ\n`;
+      write(`<<\n  /Length ${content.length}\n>>\nstream\n${content}endstream\nendobj\n`);
+      
+      // Compute cross-reference table (xref)
+      const xrefOffset = currentOffset;
+      write("xref\n");
+      write("0 6\n");
+      write("0000000000 65535 f \n");
+      for (let i = 1; i <= 5; i++) {
+        const offsetStr = String(offsets[i]).padStart(10, '0');
+        write(`${offsetStr} 00000 n \n`);
+      }
+      
+      write("trailer\n");
+      write(`<<\n  /Size 6\n  /Root 1 0 R\n>>\n`);
+      write("startxref\n");
+      write(`${xrefOffset}\n`);
+      write("%%EOF\n");
+
+      return new Blob(chunks, { type: 'application/pdf' });
+    }
+
+    // Helper to start the file download
+    function downloadFile(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 150);
+      
+      parent.postMessage({
+        pluginMessage: {
+          type: 'notify',
+          message: `Exported ${filename} successfully!`
+        }
+      }, '*');
+    }
+  </script>
+</body>
+</html>
